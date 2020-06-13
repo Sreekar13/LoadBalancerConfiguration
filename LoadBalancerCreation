@@ -1,0 +1,54 @@
+Let's see how to create a load balancer that handles requests for clients and uses a set of backend servers to respond back to them,
+
+Suppose we have 2 application backend servers. They are:-
+
+1) BackendServer1
+2) BackendServer2
+
+Imagine, we have two end points one from each backend server,
+
+http://BackendServer1:8830
+
+http://BackendServer2:8830
+
+We have a Load Balancing server, "LoadBalancer"
+
+So, the desired solution should be, when we hit http://LoadBalancer:80 we should get response from any one of the two backend servers.
+
+We use NGINX for setting up the load balancer,
+
+we install nginx in LoadBalancer server,
+
+//yum install -y nginx
+
+//systemctl start nginx
+
+//systemctl enable nginx
+
+Now we have to let the NGINX know what to serve when the client hits the LoadBalancer, so we would edit the conf file of nginx stating what endpoints to server and in what fasion(Round-Robin<default>, IP Hashing, Least active connections)
+
+//vi /etc/nginx/sites-available/default
+
+Replace with the following content in that file,
+upstream web_backend{
+	#Default mechanism to serve the backend is round-robin
+	#To use least active connection protocol, uncomment the below line
+	#least_conn;
+	#To use stciky session protocol, uncomment the below line
+	#ip_hash;
+	server BackendServer1:8830;
+	server BackendServer2:8830;
+}
+
+server{
+	listen 80;
+	
+	location /{
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_pass http://web_backend;
+	}
+}
+
+--Save and close the file using escape key and then ":wq" command
+
+Now restart the nginx service inorder to start the load balancer that serves the backend servers
